@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ABA Data Sheet Builder</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a1a1a;
+    background: #f4f5f7;
+  }
+  .app { display: flex; min-height: 100vh; }
+
+  /* ---------- Sidebar palette ---------- */
+  .palette {
+    width: 240px;
+    flex: 0 0 240px;
+    background: #ffffff;
+    border-right: 1px solid #e3e5e8;
+    padding: 16px 14px;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .palette h1 { font-size: 15px; margin: 0 0 4px; }
+  .palette .sub { font-size: 12px; color: #6b7280; margin: 0 0 14px; line-height: 1.4; }
+  .palette h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #9aa0a6; margin: 16px 0 8px; }
+  .pal-item {
+    display: flex; align-items: center; gap: 8px;
+    background: #f8f9fb; border: 1px solid #e3e5e8; border-radius: 8px;
+    padding: 8px 10px; margin-bottom: 7px; font-size: 13px; cursor: grab;
+    user-select: none; transition: border-color .12s, background .12s;
+  }
+  .pal-item:hover { border-color: #b9c0c8; background: #f1f3f6; }
+  .pal-item:active { cursor: grabbing; }
+  .pal-item .ico { font-size: 15px; width: 18px; text-align: center; }
+  .pal-tip { font-size: 11px; color: #9aa0a6; margin-top: 10px; line-height: 1.45; }
+
+  /* ---------- Main area ---------- */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .toolbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 12px 18px; background: #fff; border-bottom: 1px solid #e3e5e8;
+    position: sticky; top: 0; z-index: 20;
+  }
+  .toolbar .spacer { flex: 1; }
+  button.btn {
+    font: inherit; font-size: 13px; border: 1px solid #d2d6db; background: #fff;
+    color: #1a1a1a; padding: 7px 12px; border-radius: 7px; cursor: pointer;
+  }
+  button.btn:hover { background: #f1f3f6; }
+  button.btn.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+  button.btn.primary:hover { background: #1d4ed8; }
+  button.btn.danger:hover { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
+  .tb-select { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid #d2d6db; border-radius: 7px; background: #fff; max-width: 190px; }
+  .menu-wrap { position: relative; }
+  .menu-panel { position: absolute; right: 0; top: calc(100% + 6px); width: 260px; background: #fff; border: 1px solid #e3e5e8; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 8px; z-index: 40; }
+  .menu-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #9aa0a6; padding: 4px 6px 6px; }
+  .menu-select { width: 100%; max-width: none; margin-bottom: 6px; }
+  .menu-row { display: flex; gap: 6px; }
+  .menu-row .btn { flex: 1; padding: 6px 4px; }
+  .menu-div { height: 1px; background: #eceef1; margin: 8px 2px; }
+  .menu-item { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; background: transparent; border: none; padding: 8px; border-radius: 7px; cursor: pointer; color: #1a1a1a; }
+  .menu-item:hover { background: #f1f3f6; }
+  .menu-item.danger:hover { background: #fef2f2; color: #b91c1c; }
+
+  .sheet-wrap { padding: 24px; display: flex; justify-content: center; }
+  .sheet {
+    background: #fff; width: 8.5in; max-width: 100%; min-height: 6in;
+    padding: 0.55in 0.6in; box-shadow: 0 1px 4px rgba(0,0,0,.10), 0 8px 24px rgba(0,0,0,.06);
+    border-radius: 2px;
+  }
+  .empty {
+    border: 2px dashed #cbd2d9; border-radius: 10px; padding: 60px 20px;
+    text-align: center; color: #9aa0a6; font-size: 14px;
+  }
+
+  /* ---------- Blocks ---------- */
+  .block { position: relative; margin: 0 0 9px; padding-top: 2px; }
+  .block.dragging { opacity: .4; }
+  .block-tools {
+    position: absolute; top: -10px; right: 0; display: flex; gap: 3px;
+    background: #fff; border: 1px solid #e3e5e8; border-radius: 7px; padding: 2px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08); z-index: 5;
+  }
+  .block:hover .block-tools { display: flex; }
+  .block-tools button {
+    border: none; background: transparent; cursor: pointer; font-size: 13px;
+    width: 26px; height: 24px; border-radius: 5px; color: #4b5563;
+  }
+  .block-tools button:hover { background: #f1f3f6; }
+  .drag-handle { cursor: grab; }
+  .drop-line { height: 3px; background: #2563eb; border-radius: 3px; margin: 4px 0; }
+
+  .settings {
+    background: #f6f8fb; border: 1px solid #e1e6ee; border-radius: 8px;
+    padding: 12px 14px; margin: 6px 0 10px; font-size: 12.5px;
+  }
+  .settings label { display: block; font-weight: 600; margin: 8px 0 4px; color: #374151; }
+  .settings label:first-child { margin-top: 0; }
+  .settings input[type=text], .settings input[type=number], .settings textarea, .settings select {
+    width: 100%; font: inherit; font-size: 12.5px; padding: 6px 8px;
+    border: 1px solid #cdd3da; border-radius: 6px; background: #fff;
+  }
+  .settings textarea { min-height: 64px; resize: vertical; line-height: 1.5; }
+  .settings .row { display: flex; gap: 12px; }
+  .settings .row > div { flex: 1; }
+  .settings .hint { color: #8a9099; font-weight: 400; font-size: 11px; }
+
+  /* ---------- Printable form elements ---------- */
+  .sheet-title { text-align: center; margin: 0 0 4px; }
+  .sheet-title h2 { margin: 0; font-size: 19px; letter-spacing: .01em; }
+  .sheet-title .meta { font-size: 11px; color: #555; margin-top: 2px; }
+
+  .blk-title { font-size: 14px; font-weight: 700; margin: 0 0 3px; border-bottom: 1.5px solid #222; padding-bottom: 2px; }
+  .blk-note { font-size: 10.5px; color: #9aa0a6; font-style: italic; margin: 0 0 5px; line-height: 1.35; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 22px; }
+  .field-grid.cols-1 { grid-template-columns: 1fr; }
+  .field-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .field { display: flex; align-items: flex-end; gap: 6px; font-size: 12.5px; }
+  .field .lbl { white-space: nowrap; color: #333; }
+  .field .ln { flex: 1; border-bottom: 1px solid #444; height: 14px; }
+
+  table.ds { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+  table.ds th, table.ds td { border: 1px solid #555; padding: 2px 4px; text-align: center; }
+  table.ds th { background: #eef1f5; font-weight: 600; }
+  table.ds td.l { text-align: left; }
+  table.ds td.tall { height: 20px; }
+  table.ds td.note { height: 30px; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 11.5px; }
+  .legend-row span { white-space: nowrap; }
+  .notes-lines .nl { border-bottom: 1px solid #888; height: 18px; }
+  .sig { display: flex; gap: 30px; margin-top: 8px; }
+  .sig .field { flex: 1; }
+  .small-caps { font-size: 11px; color: #555; }
+
+  /* ---------- Print ---------- */
+  @media print {
+    body { background: #fff; }
+    .app, .main { display: block; }
+    .palette, .toolbar { display: none !important; }
+    .sheet-wrap { padding: 0; display: block; }
+    .sheet { display: block; box-shadow: none; width: 100%; max-width: none; padding: 0; margin: 0; border-radius: 0; }
+    .block .form svg { width: 100% !important; height: auto; }
+    .block-tools { display: none !important; }
+    .settings { display: none !important; }
+    .block { margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid; }
+    .block .form, table.ds, .field-grid, .notes-lines, .sig { break-inside: avoid; page-break-inside: avoid; }
+    table.ds tr, .field, .notes-lines .nl { break-inside: avoid; page-break-inside: avoid; }
+    table.ds thead { display: table-header-group; }
+    @page { size: letter; margin: 0.3in; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="palette">
+    <h1>ABA Data Sheet Builder</h1>
+    <p class="sub">Drag blocks into the page. Click ⚙ to configure. Reorder with the ⠿ handle. Then Print / Save as PDF.</p>
+
+    <h2>Header</h2>
+    <div class="pal-item" draggable="true" data-type="header"><span class="ico">🗂️</span> Session header</div>
+
+    <h2>Data collection</h2>
+    <div class="pal-item" draggable="true" data-type="dtt"><span class="ico">▦</span> DTT / trial-by-trial</div>
+    <div class="pal-item" draggable="true" data-type="taskanalysis"><span class="ico">☑</span> Task analysis / chaining</div>
+    <div class="pal-item" draggable="true" data-type="frequency"><span class="ico">#</span> Frequency / count</div>
+    <div class="pal-item" draggable="true" data-type="duration"><span class="ico">⏱</span> Duration</div>
+    <div class="pal-item" draggable="true" data-type="interval"><span class="ico">▤</span> Interval recording</div>
+    <div class="pal-item" draggable="true" data-type="abc"><span class="ico">🅰</span> ABC narrative</div>
+    <div class="pal-item" draggable="true" data-type="sbt"><span class="ico">🧩</span> SBT (Tol / FCR)</div>
+    <div class="pal-item" draggable="true" data-type="toilet"><span class="ico">🚽</span> Toilet training</div>
+
+    <h2>Session flow</h2>
+    <div class="pal-item" draggable="true" data-type="session"><span class="ico">🗓️</span> Session runner / schedule</div>
+
+    <h2>Graphs (hand-plot)</h2>
+    <div class="pal-item" draggable="true" data-type="graph"><span class="ico">📈</span> Blank line graph</div>
+    <div class="pal-item" draggable="true" data-type="cumulative"><span class="ico">📈</span> Cumulative graph</div>
+    <div class="pal-item" draggable="true" data-type="bar"><span class="ico">📊</span> Bar / frequency graph</div>
+    <div class="pal-item" draggable="true" data-type="celeration"><span class="ico">🕸️</span> Standard celeration chart</div>
+
+    <h2>Reference & sign-off</h2>
+    <div class="pal-item" draggable="true" data-type="legend"><span class="ico">🔑</span> Prompt code legend</div>
+    <div class="pal-item" draggable="true" data-type="notes"><span class="ico">✎</span> Notes / comments</div>
+    <div class="pal-item" draggable="true" data-type="signature"><span class="ico">✍</span> Signature line</div>
+
+    <p class="pal-tip">Tip: double-click a block to open its settings. Your layout auto-saves in this browser.</p>
+  </aside>
+
+  <div class="main">
+    <div class="toolbar">
+      <button class="btn primary" id="printBtn">🖨 Print / Save PDF</button>
+      <div class="spacer"></div>
+      <span class="small-caps" id="status">Empty sheet</span>
+      <div class="menu-wrap">
+        <button class="btn" id="menuBtn" aria-haspopup="true" aria-expanded="false">☰ Menu</button>
+        <div class="menu-panel" id="menuPanel" hidden>
+          <div class="menu-label">Saved sheets</div>
+          <select id="library" class="tb-select menu-select"><option value="">— none —</option></select>
+          <div class="menu-row">
+            <button class="btn" id="loadBtn">Load</button>
+            <button class="btn danger" id="deleteBtn">Delete</button>
+          </div>
+          <div class="menu-div"></div>
+          <div class="menu-label">Save current sheet</div>
+          <input id="saveName" class="tb-select menu-select" type="text" placeholder="Name this sheet…" autocomplete="off">
+          <div class="menu-row"><button class="btn primary" id="saveBtn" style="flex:1">Save</button></div>
+          <div class="menu-div"></div>
+          <button class="menu-item" id="exportBtn">↓ Export sheet to file</button>
+          <button class="menu-item" id="importBtn">↑ Import sheet from file</button>
+          <div class="menu-div"></div>
+          <button class="menu-item" id="sampleBtn">Load sample sheet</button>
+          <button class="menu-item danger" id="clearBtn">New / clear sheet</button>
+          <div class="menu-div"></div>
+          <a class="menu-item" href="supporters.html" style="text-decoration:none;color:#2563eb">☕ Support this tool</a>
+          <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+        </div>
+      </div>
+    </div>
+
+    <div class="sheet-wrap">
+      <div class="sheet" id="sheet">
+        <div class="empty" id="empty">Drag a block here to start building your data sheet →</div>
+        <div id="canvas"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var STORE_KEY = "aba_datasheet_builder_v1";
+  var uid = 0;
+  function nextId() { return "b" + (++uid) + "_" + Math.random().toString(36).slice(2, 6); }
+
+  // ---------- Block definitions ----------
+  var DEFAULTS = {
+    header: function () {
+      return { title: "ABA Data Sheet", fields: ["Client", "Date", "Therapist / RBT", "Program", "Session start", "Session end"] };
+    },
+    dtt: function () {
+      return { title: "Discrete Trial Training", targets: ["Target 1", "Target 2", "Target 3"], trials: 10, percentCol: true };
+    },
+    taskanalysis: function () {
+      return { title: "Task Analysis", steps: ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"], cols: 5, colLabel: "Trial" };
+    },
+    frequency: function () {
+      return { title: "Frequency / Event Count", behaviors: ["Behavior 1", "Behavior 2"], boxes: 20 };
+    },
+    duration: function () {
+      return { title: "Duration Recording", behavior: "Behavior", rows: 8 };
+    },
+    interval: function () {
+      return { title: "Interval Recording", behavior: "Behavior", method: "Partial", intervalLen: "1 min", intervals: 20, perRow: 10 };
+    },
+    abc: function () {
+      return { title: "ABC Narrative", rows: 6, includeFunction: true };
+    },
+    sbt: function () {
+      return {
+        title: "SBT — Tolerance / FCR Data Collection",
+        headerFields: ["Date", "Initials", "Target Response", "RR Schedule", "Start Time", "End Time"],
+        cols: ["PB Tally", "FCR +/−", "Tol +/−"],
+        sets: 3, trials: 10, showPercent: true,
+        footer: "Total duration of 30-trial block: __________     Step ____   Level ____\nCriteria met for increasing reinforcement schedule?  (If yes, highlight the consecutive sessions where criteria were met and record the new RR schedule next to “RR Schedule” on the next data set.)"
+      };
+    },
+    legend: function () {
+      return { title: "Prompt Hierarchy", entries: ["I = Independent", "G = Gestural", "V = Verbal", "M = Model", "PP = Partial Physical", "FP = Full Physical", "+ = Correct", "− = Incorrect"] };
+    },
+    session: function () {
+      return {
+        title: "Session Schedule",
+        startTime: "9:00 AM", blockLen: 30, blocks: 6, showNotesCol: true,
+        activities: ["Pairing / build rapport", "DTT — acquisition targets", "Break / reinforcement", "Natural environment teaching (NET)", "DTT — maintenance & review", "Wrap-up, clean up, data entry"],
+        hints: "• Follow the learner's motivation and keep pairing throughout.\n• Intersperse mastered & acquisition targets to keep momentum.\n• Honor breaks — watch for signs of fatigue.\n• Record data in the moment; don't rely on memory."
+      };
+    },
+    toilet: function () {
+      return {
+        title: "Toilet Training Data Sheet",
+        headerFields: ["Child", "Date", "Staff / Caregiver", "Block start–end", "Location"],
+        legend: "Codes — Sit: P = prompted, SI = self-initiated  |  Result: U = urine, BM = bowel movement, DS = dry sit (nothing), A = accident  |  Pants: D = dry, W = wet/soiled  |  Request prompt: FP = full physical, PP = partial physical, G = gesture, I = independent",
+        cols: ["Time", "Sit (P/SI)", "Result (U/BM/DS/A)", "Pants (D/W)", "Fluids (oz)", "Request (FP/PP/G/I)", "Reinforcer given", "Initials", "Notes"],
+        rows: 14,
+        summary: "Daily summary:   Total sits ____    Voids in toilet ____    Accidents ____    Success % = voids ÷ (voids + accidents) × 100 = ____    Independent (I) requests ____",
+        fading: "Fading rule: begin stretching sit intervals only after success is ≥80% for 2–3 consecutive days. If success falls below ~50% after a change, back up one step."
+      };
+    },
+    graph: function () {
+      return { title: "Progress Graph", yLabel: "% Correct", yMax: 100, ySteps: 10, xCount: 15, xLabel: "Date / initials", xStyle: "date", chartH: "medium" };
+    },
+    cumulative: function () {
+      return { title: "Cumulative Record", yLabel: "Cumulative responses", yMax: 100, ySteps: 10, xCount: 15, xLabel: "Date / initials", xStyle: "date", chartH: "medium" };
+    },
+    bar: function () {
+      return { title: "Frequency Graph", yLabel: "Frequency", yMax: 20, ySteps: 10, xCount: 10, xLabel: "Date / initials", xStyle: "date", chartH: "medium" };
+    },
+    celeration: function () {
+      return { title: "Standard Celeration Chart", yLabel: "Count per minute", weeks: 20, minExp: -3, maxExp: 3 };
+    },
+    notes: function () { return { title: "Notes / Comments", lines: 5 }; },
+    signature: function () { return { fields: ["Therapist signature", "Date", "Supervisor signature", "Date"] }; }
+  };
+
+  var LABELS = {
+    header: "Session header", dtt: "DTT / trial-by-trial", taskanalysis: "Task analysis",
+    frequency: "Frequency / count", duration: "Duration", interval: "Interval recording",
+    abc: "ABC narrative", sbt: "SBT data collection", toilet: "Toilet training", session: "Session runner", graph: "Blank line graph", cumulative: "Cumulative graph", bar: "Bar / frequency graph", celeration: "Standard celeration chart", legend: "Prompt code legend", notes: "Notes", signature: "Signature line"
+  };
+
+  // ---------- State ----------
+  var model = []; // [{id, type, config, open}]
+  var currentName = "";
+  var LIB_KEY = "aba_datasheet_library_v1";
+  var canvas = document.getElementById("canvas");
+  var emptyEl = document.getElementById("empty");
+  var statusEl = document.getElementById("status");
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(model.map(function (b) { return { type: b.type, config: b.config }; }))); } catch (e) {}
+  }
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      var arr = JSON.parse(raw);
+      model = arr.map(function (b) { return { id: nextId(), type: b.type, config: b.config, open: false }; });
+    } catch (e) { model = []; }
+  }
+
+  // ---------- Helpers to build form HTML ----------
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function el(html) { var t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+  function pad2(n) { n = String(n); return n.length < 2 ? "0" + n : n; }
+  function parseClock(str) {
+    if (!str) return null;
+    var m = String(str).trim().match(/^(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?$/i);
+    if (!m) return null;
+    var h = +m[1], mn = +m[2], ap = m[3] ? m[3].toLowerCase().replace(/\./g, "") : null;
+    if (ap) { if (h === 12) h = 0; if (ap === "pm") h += 12; }
+    return h * 60 + mn;
+  }
+  function fmtClock(total) {
+    total = ((Math.round(total) % 1440) + 1440) % 1440;
+    var h = Math.floor(total / 60), mn = total % 60, ap = h < 12 ? "AM" : "PM", h12 = h % 12 || 12;
+    return h12 + ":" + pad2(mn) + " " + ap;
+  }
+  function fmtHM(m) { return Math.floor(m / 60) + ":" + pad2(m % 60); }
+  function rangeLabel(startMin, offset, len) {
+    if (startMin != null) return fmtClock(startMin + offset) + "–" + fmtClock(startMin + offset + len);
+    return fmtHM(offset) + "–" + fmtHM(offset + len);
+  }
+  function fmtDur(m) {
+    var h = Math.floor(m / 60), mn = m % 60, parts = [];
+    if (h) parts.push(h + "h");
+    if (mn) parts.push(mn + "m");
+    return parts.length ? parts.join(" ") : "0m";
+  }
+
+  // ---------- Printable renderers ----------
+  function renderForm(b) {
+    var c = b.config;
+    switch (b.type) {
+      case "header": {
+        var cols = c.fields.length <= 2 ? "cols-1" : (c.fields.length % 3 === 0 ? "cols-3" : "");
+        var fields = c.fields.map(function (f) {
+          return '<div class="field"><span class="lbl">' + esc(f) + ':</span><span class="ln"></span></div>';
+        }).join("");
+        return '<div class="sheet-title"><h2>' + esc(c.title) + '</h2></div>' + renderNote(c) +
+               '<div class="field-grid ' + cols + '" style="margin-top:8px">' + fields + '</div>';
+      }
+      case "dtt": {
+        var head = '<th class="l">Target</th>';
+        for (var i = 1; i <= c.trials; i++) head += "<th>" + i + "</th>";
+        if (c.percentCol) head += "<th>%</th>";
+        var rows = c.targets.map(function (t) {
+          var cells = "";
+          for (var j = 0; j < c.trials; j++) cells += "<td class='tall'></td>";
+          if (c.percentCol) cells += "<td></td>";
+          return "<tr><td class='l'>" + esc(t) + "</td>" + cells + "</tr>";
+        }).join("");
+        return blkTitle(c.title, c) + "<table class='ds'><tr>" + head + "</tr>" + rows + "</table>";
+      }
+      case "taskanalysis": {
+        var h = '<th class="l">Step</th>';
+        for (var k = 1; k <= c.cols; k++) h += "<th>" + esc(c.colLabel) + " " + k + "</th>";
+        var rs = c.steps.map(function (s, idx) {
+          var cells = "";
+          for (var m = 0; m < c.cols; m++) cells += "<td class='tall'></td>";
+          return "<tr><td class='l'>" + (idx + 1) + ". " + esc(s) + "</td>" + cells + "</tr>";
+        }).join("");
+        return blkTitle(c.title, c) + "<table class='ds'><tr>" + h + "</tr>" + rs + "</table>";
+      }
+      case "frequency": {
+        var rowsF = c.behaviors.map(function (bh) {
+          var boxes = "";
+          for (var n = 0; n < c.boxes; n++) boxes += "<td style='width:18px'></td>";
+          return "<tr><td class='l' style='width:130px'>" + esc(bh) + "</td>" + boxes + "<td style='width:42px'>Total</td></tr>";
+        }).join("");
+        return blkTitle(c.title, c) + "<table class='ds'>" + rowsF + "</table>";
+      }
+      case "duration": {
+        var rD = "";
+        for (var d = 0; d < c.rows; d++) rD += "<tr><td class='tall'></td><td></td><td></td></tr>";
+        return blkTitle(c.title + " — " + c.behavior, c) +
+          "<table class='ds'><tr><th>Start time</th><th>Stop time</th><th>Total duration</th></tr>" + rD + "</table>";
+      }
+      case "interval": {
+        var per = Math.max(1, c.perRow);
+        var total = c.intervals;
+        var html = blkTitle(c.title, c) +
+          "<div class='small-caps' style='margin-bottom:4px'>Method: " + esc(c.method) +
+          " &nbsp;•&nbsp; Interval length: " + esc(c.intervalLen) +
+          " &nbsp;•&nbsp; Behavior: " + esc(c.behavior) + "</div>";
+        html += "<table class='ds'>";
+        var idx = 1;
+        while (idx <= total) {
+          var labelRow = "<tr>", boxRow = "<tr>";
+          for (var p = 0; p < per && idx <= total; p++, idx++) {
+            labelRow += "<th>" + idx + "</th>";
+            boxRow += "<td class='tall'></td>";
+          }
+          html += labelRow + "</tr>" + boxRow + "</tr>";
+        }
+        html += "</table>";
+        return html;
+      }
+      case "abc": {
+        var cols = "<th style='width:60px'>Time</th><th>Antecedent</th><th>Behavior</th><th>Consequence</th>";
+        if (c.includeFunction) cols += "<th style='width:90px'>Poss. function</th>";
+        var rA = "";
+        for (var a = 0; a < c.rows; a++) {
+          rA += "<tr><td class='note'></td><td class='note'></td><td class='note'></td><td class='note'></td>" + (c.includeFunction ? "<td class='note'></td>" : "") + "</tr>";
+        }
+        return blkTitle(c.title, c) + "<table class='ds'><tr>" + cols + "</tr>" + rA + "</table>";
+      }
+      case "session": {
+        var blocks = Math.min(30, Math.max(1, c.blocks || 6));
+        var len = Math.max(1, c.blockLen || 30);
+        var startMin = parseClock(c.startTime);
+        var acts = c.activities || [];
+        var meta = "Total " + fmtDur(blocks * len) + "  •  " + blocks + " × " + len + " min block" + (blocks > 1 ? "s" : "") + (startMin != null ? ("  •  Start " + c.startTime) : "");
+        var thead = '<th style="width:110px">Time</th><th class="l">Suggested activity</th>' + (c.showNotesCol ? '<th style="width:150px">Notes</th>' : "");
+        var srows = "";
+        for (var bi = 0; bi < blocks; bi++) {
+          srows += '<tr><td>' + rangeLabel(startMin, bi * len, len) + '</td><td class="l" style="height:26px">' + esc(acts[bi] || "") + '</td>' + (c.showNotesCol ? "<td></td>" : "") + "</tr>";
+        }
+        var stable = '<table class="ds"><tr>' + thead + "</tr>" + srows + "</table>";
+        var hintsBody = (c.hints ? '<div style="font-size:10.5px;color:#444;white-space:pre-wrap;line-height:1.5">' + esc(c.hints) + "</div>" : "") +
+          '<div class="notes-lines"><div class="nl"></div><div class="nl"></div></div>';
+        var hints = '<div style="margin-top:8px"><div style="font-size:11px;font-weight:700;margin-bottom:3px">Notes / Helpful Hints</div>' + hintsBody + "</div>";
+        return blkTitle(c.title, c) + '<div class="small-caps" style="margin-bottom:5px">' + esc(meta) + "</div>" + stable + hints;
+      }
+      case "toilet": {
+        var trows = Math.min(30, Math.max(1, c.rows || 14));
+        var hff = c.headerFields.map(function (f) {
+          return '<div class="field"><span class="lbl">' + esc(f) + ':</span><span class="ln"></span></div>';
+        }).join("");
+        var thd = c.cols.map(function (col, idx) {
+          var lbl = esc(col).replace(/ \(/, "<br>(");
+          return '<th' + (idx === 0 ? ' style="width:44px"' : "") + ">" + lbl + "</th>";
+        }).join("");
+        var trs = "";
+        for (var tr = 0; tr < trows; tr++) {
+          trs += "<tr>" + c.cols.map(function () { return "<td class='tall'></td>"; }).join("") + "</tr>";
+        }
+        var foot = function (txt) { return txt ? '<div style="font-size:10px;color:#444;margin-top:5px;white-space:pre-wrap;line-height:1.45">' + esc(txt) + "</div>" : ""; };
+        return blkTitle(c.title, c) +
+          (c.legend ? '<div style="font-size:9.5px;color:#666;margin-bottom:6px;line-height:1.4">' + esc(c.legend) + "</div>" : "") +
+          '<div class="field-grid cols-3" style="margin-bottom:8px">' + hff + "</div>" +
+          '<table class="ds" style="font-size:10.5px"><tr>' + thd + "</tr>" + trs + "</table>" +
+          foot(c.summary) + foot(c.fading);
+      }
+      case "sbt": {
+        var sets = Math.min(6, Math.max(1, c.sets || 3));
+        var trials = Math.min(20, Math.max(1, c.trials || 10));
+        var hf = c.headerFields.map(function (f) {
+          return '<div class="field"><span class="lbl">' + esc(f) + ':</span><span class="ln"></span></div>';
+        }).join("");
+        var header = '<div class="field-grid" style="margin-bottom:8px">' + hf + "</div>";
+        var setsHtml = "";
+        for (var si = 1; si <= sets; si++) {
+          var thead = '<th style="width:30px">Trial</th>' + c.cols.map(function (col) { return "<th>" + esc(col) + "</th>"; }).join("");
+          var body = "";
+          for (var r = 1; r <= trials; r++) {
+            body += "<tr><td>" + r + "</td>" + c.cols.map(function () { return "<td class='tall'></td>"; }).join("") + "</tr>";
+          }
+          if (c.showPercent) body += "<tr><td>%</td>" + c.cols.map(function () { return "<td></td>"; }).join("") + "</tr>";
+          setsHtml += '<div style="flex:1"><div style="font-size:11px;font-weight:700;margin-bottom:2px">Set ' + si + '</div><table class="ds"><tr>' + thead + "</tr>" + body + "</table></div>";
+        }
+        var grid = '<div style="display:flex;gap:10px;align-items:flex-start">' + setsHtml + "</div>";
+        var footer = c.footer ? '<div style="font-size:10px;color:#444;margin-top:6px;white-space:pre-wrap;line-height:1.4">' + esc(c.footer) + "</div>" : "";
+        return blkTitle(c.title, c) + header + grid + footer;
+      }
+      case "graph": case "cumulative": {
+        return blkTitle(c.title, c) + graphSVG(c);
+      }
+      case "bar": {
+        return blkTitle(c.title, c) + barSVG(c);
+      }
+      case "celeration": {
+        return blkTitle(c.title, c) + celerationSVG(c);
+      }
+      case "legend": {
+        var items = c.entries.map(function (e) { return "<span>" + esc(e) + "</span>"; }).join("");
+        return blkTitle(c.title, c) + "<div class='legend-row'>" + items + "</div>";
+      }
+      case "notes": {
+        var lines = "";
+        for (var l = 0; l < c.lines; l++) lines += "<div class='nl'></div>";
+        return blkTitle(c.title, c) + "<div class='notes-lines'>" + lines + "</div>";
+      }
+      case "signature": {
+        var f = c.fields.map(function (x) {
+          return '<div class="field"><span class="lbl">' + esc(x) + ':</span><span class="ln"></span></div>';
+        }).join("");
+        return renderNote(c) + '<div class="sig">' + f + "</div>";
+      }
+    }
+    return "";
+  }
+  function blkTitle(t, c) { return '<div class="blk-title">' + esc(t) + "</div>" + renderNote(c); }
+
+  function chartHeight(c) { return ({ small: 120, medium: 168, large: 242 })[c.chartH || "medium"] || 168; }
+
+  function graphSVG(c) {
+    var style = c.xStyle || "number";
+    var W = 720, L = 48, R = 16, T = 12, plotH = chartHeight(c);
+    var B = style === "date" ? 78 : 46;
+    var H = T + plotH + B, pw = W - L - R, ph = plotH;
+    var yMax = Math.max(1, c.yMax || 100);
+    var ySteps = Math.min(40, Math.max(1, c.ySteps || 10));
+    var xCount = Math.min(60, Math.max(1, c.xCount || 15));
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
+    for (var i = 0; i <= ySteps; i++) {
+      var y = T + ph - ph * i / ySteps;
+      var valTxt = Math.round(yMax * i / ySteps * 100) / 100;
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + (L + pw) + '" y2="' + y + '" stroke="' + (i === 0 ? "#333" : "#6f767e") + '" stroke-width="' + (i === 0 ? 1.1 : 0.9) + '" shape-rendering="crispEdges"/>';
+      s += '<text x="' + (L - 5) + '" y="' + (y + 3) + '" font-size="9" text-anchor="end" fill="#333">' + valTxt + '</text>';
+    }
+    var denom = xCount > 1 ? (xCount - 1) : 1;
+    for (var j = 1; j <= xCount; j++) {
+      var x = L + (xCount > 1 ? pw * (j - 1) / denom : 0);
+      s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + (T + ph) + '" stroke="#6f767e" stroke-width="0.9" shape-rendering="crispEdges"/>';
+      s += xAxisMark(x, T + ph, style, j);
+    }
+    s += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (T + ph) + '" stroke="#333" stroke-width="1.1" shape-rendering="crispEdges"/>';
+    if (style === "number" && c.dateRow) {
+      s += '<text x="' + L + '" y="' + (T + ph + 30) + '" font-size="8.5" text-anchor="start" fill="#888">Date:</text>';
+      s += '<line x1="' + (L + 32) + '" y1="' + (T + ph + 30) + '" x2="' + (L + pw) + '" y2="' + (T + ph + 30) + '" stroke="#9aa0a6" stroke-width="0.7"/>';
+    }
+    s += '<text x="' + (L + pw / 2) + '" y="' + (H - 5) + '" font-size="10" text-anchor="middle" fill="#333">' + esc(c.xLabel) + '</text>';
+    s += '<text transform="translate(11,' + (T + ph / 2) + ') rotate(-90)" font-size="10" text-anchor="middle" fill="#333">' + esc(c.yLabel) + '</text>';
+    s += '</svg>';
+    return s;
+  }
+
+  // x-axis tick: either a centered number, or an angled write-in slot for date + initials
+  function xAxisMark(x, y0, style, num) {
+    if (style === "date") {
+      // guide line slanting down-left from the axis point; tech writes MM/DD + initials along it
+      var len = 46, ang = 60 * Math.PI / 180;
+      var x2 = x - len * Math.cos(ang), y2 = y0 + len * Math.sin(ang);
+      return '<line x1="' + x + '" y1="' + y0 + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="#9aa0a6" stroke-width="0.7"/>';
+    }
+    return '<text x="' + x + '" y="' + (y0 + 12) + '" font-size="8.5" text-anchor="middle" fill="#444">' + num + '</text>';
+  }
+
+  function barSVG(c) {
+    var style = c.xStyle || "number";
+    var W = 720, L = 48, R = 16, T = 12, plotH = chartHeight(c);
+    var B = style === "date" ? 78 : 46;
+    var H = T + plotH + B, pw = W - L - R, ph = plotH;
+    var yMax = Math.max(1, c.yMax || 20), ySteps = Math.min(40, Math.max(1, c.ySteps || 10));
+    var bars = Math.min(60, Math.max(1, c.xCount || 10));
+    var colW = pw / bars;
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
+    for (var i = 0; i <= ySteps; i++) {
+      var y = T + ph - ph * i / ySteps, val = Math.round(yMax * i / ySteps * 100) / 100;
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + (L + pw) + '" y2="' + y + '" stroke="' + (i === 0 ? "#333" : "#6f767e") + '" stroke-width="' + (i === 0 ? 1.1 : 0.9) + '" shape-rendering="crispEdges"/>';
+      s += '<text x="' + (L - 5) + '" y="' + (y + 3) + '" font-size="9" text-anchor="end" fill="#333">' + val + '</text>';
+    }
+    for (var k = 0; k <= bars; k++) {
+      var x = L + colW * k;
+      s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + (T + ph) + '" stroke="#6f767e" stroke-width="0.9" shape-rendering="crispEdges"/>';
+    }
+    for (var b = 0; b < bars; b++) {
+      var cx = L + colW * (b + 0.5);
+      s += xAxisMark(cx, T + ph, style, b + 1);
+    }
+    s += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (T + ph) + '" stroke="#333" stroke-width="1.1"/>';
+    if (style === "number" && c.dateRow) {
+      s += '<text x="' + L + '" y="' + (T + ph + 30) + '" font-size="8.5" fill="#888">Label:</text>';
+      s += '<line x1="' + (L + 34) + '" y1="' + (T + ph + 30) + '" x2="' + (L + pw) + '" y2="' + (T + ph + 30) + '" stroke="#9aa0a6" stroke-width="0.7"/>';
+    }
+    s += '<text x="' + (L + pw / 2) + '" y="' + (H - 5) + '" font-size="10" text-anchor="middle" fill="#333">' + esc(c.xLabel) + '</text>';
+    s += '<text transform="translate(11,' + (T + ph / 2) + ') rotate(-90)" font-size="10" text-anchor="middle" fill="#333">' + esc(c.yLabel) + '</text>';
+    s += '</svg>';
+    return s;
+  }
+
+  function celerationSVG(c) {
+    var minExp = (c.minExp == null ? -3 : c.minExp), maxExp = (c.maxExp == null ? 3 : c.maxExp);
+    if (maxExp <= minExp) maxExp = minExp + 1;
+    var D = maxExp - minExp;
+    var weeks = Math.min(30, Math.max(1, c.weeks || 20)), days = weeks * 7;
+    var W = 760, H = 140 + D * 66, L = 58, R = 16, T = 16, B = 84;
+    var pw = W - L - R, ph = H - T - B;
+    function yFor(p) { return T + ph * (maxExp - p) / D; }
+    function fmtPow(p) { var v = Math.pow(10, p); return p < 0 ? v.toFixed(-p) : String(v); }
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
+    // minor multiplier lines within each decade
+    for (var p = minExp; p < maxExp; p++) {
+      for (var m = 2; m <= 9; m++) {
+        var yy = yFor(p + Math.log(m) / Math.LN10);
+        s += '<line x1="' + L + '" y1="' + yy + '" x2="' + (L + pw) + '" y2="' + yy + '" stroke="#868d95" stroke-width="0.55"/>';
+      }
+    }
+    // major decade lines + labels
+    for (var q = minExp; q <= maxExp; q++) {
+      var yq = yFor(q);
+      s += '<line x1="' + L + '" y1="' + yq + '" x2="' + (L + pw) + '" y2="' + yq + '" stroke="#565c64" stroke-width="0.9" shape-rendering="crispEdges"/>';
+      s += '<text x="' + (L - 5) + '" y="' + (yq + 3) + '" font-size="9" text-anchor="end" fill="#333">' + fmtPow(q) + '</text>';
+    }
+    // day lines; heavier every 7 (week / Sunday lines)
+    for (var d = 0; d <= days; d++) {
+      var x = L + pw * d / days, isWeek = (d % 7 === 0);
+      s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + (T + ph) + '" stroke="' + (isWeek ? "#3f444b" : "#6f767e") + '" stroke-width="' + (isWeek ? 1.5 : 1.05) + '" shape-rendering="crispEdges"/>';
+      if (isWeek) s += xAxisMark(x, T + ph, "date");
+    }
+    // frame emphasis
+    s += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (T + ph) + '" stroke="#333" stroke-width="1.1"/>';
+    s += '<line x1="' + L + '" y1="' + (T + ph) + '" x2="' + (L + pw) + '" y2="' + (T + ph) + '" stroke="#333" stroke-width="1.1"/>';
+    s += '<text x="' + (L + pw / 2) + '" y="' + (H - 5) + '" font-size="10" text-anchor="middle" fill="#333">Successive calendar days (' + weeks + ' weeks) — write date / initials at each week line</text>';
+    s += '<text transform="translate(12,' + (T + ph / 2) + ') rotate(-90)" font-size="10" text-anchor="middle" fill="#333">' + esc(c.yLabel || "Count per minute") + '</text>';
+    s += '</svg>';
+    return s;
+  }
+  function renderNote(c) {
+    if (!c || !c.note) return "";
+    return '<div class="blk-note">' + esc(c.note).replace(/\n/g, "<br>") + "</div>";
+  }
+
+  // ---------- Settings panel ----------
+  function renderSettings(b) {
+    var c = b.config, t = b.type, h = "";
+    function ti(label, key, hint) {
+      return '<label>' + label + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</label><input type="text" data-k="' + key + '" value="' + esc(c[key]) + '">';
+    }
+    function ni(label, key, min, max) {
+      return '<label>' + label + '</label><input type="number" data-k="' + key + '" value="' + esc(c[key]) + '" min="' + (min || 1) + '" max="' + (max || 99) + '">';
+    }
+    function ta(label, key, hint) {
+      return '<label>' + label + (hint ? ' <span class="hint">' + hint + '</span>' : '') + '</label><textarea data-k="' + key + '" data-list="1">' + esc((c[key] || []).join("\n")) + '</textarea>';
+    }
+    switch (t) {
+      case "header": h = ti("Title", "title") + ta("Fields", "fields", "one per line"); break;
+      case "dtt": h = ti("Title", "title") + ta("Targets", "targets", "one per line") + ni("Trials per target", "trials", 1, 30) +
+        '<label><input type="checkbox" data-k="percentCol" data-bool="1" ' + (c.percentCol ? "checked" : "") + '> Include % column</label>'; break;
+      case "taskanalysis": h = ti("Title", "title") + ta("Steps", "steps", "one per line") +
+        '<div class="row"><div>' + ni("Columns", "cols", 1, 20) + '</div><div>' + ti("Column label", "colLabel") + '</div></div>'; break;
+      case "frequency": h = ti("Title", "title") + ta("Behaviors", "behaviors", "one per line") + ni("Tally boxes", "boxes", 5, 40); break;
+      case "duration": h = ti("Title", "title") + ti("Behavior", "behavior") + ni("Rows", "rows", 1, 30); break;
+      case "interval":
+        h = ti("Title", "title") + ti("Behavior", "behavior") +
+          '<label>Method</label><select data-k="method"><option' + sel(c.method, "Partial") + '>Partial</option><option' + sel(c.method, "Whole") + '>Whole</option><option' + sel(c.method, "Momentary") + '>Momentary</option></select>' +
+          '<div class="row"><div>' + ti("Interval length", "intervalLen") + '</div><div>' + ni("# Intervals", "intervals", 1, 120) + '</div></div>' +
+          ni("Per row", "perRow", 1, 20); break;
+      case "abc": h = ti("Title", "title") + ni("Rows", "rows", 1, 20) +
+        '<label><input type="checkbox" data-k="includeFunction" data-bool="1" ' + (c.includeFunction ? "checked" : "") + '> Include possible-function column</label>'; break;
+      case "session": h = ti("Title", "title") +
+        '<div class="row"><div>' + ti("Start time", "startTime", "e.g. 9:00 AM — blank = durations") + '</div><div>' + ni("Block length (min)", "blockLen", 1, 240) + '</div><div>' + ni("# Blocks", "blocks", 1, 30) + '</div></div>' +
+        ta("Suggested activity per block", "activities", "one per line, top to bottom") +
+        '<label><input type="checkbox" data-k="showNotesCol" data-bool="1" ' + (c.showNotesCol ? "checked" : "") + '> Include blank notes column</label>' +
+        '<label>Notes / helpful hints</label><textarea data-k="hints">' + esc(c.hints || "") + '</textarea>'; break;
+      case "toilet": h = ti("Title", "title") + ta("Header fields", "headerFields", "one per line") + ta("Columns", "cols", "one per line") + ni("Rows", "rows", 1, 30) +
+        '<label>Legend / codes</label><textarea data-k="legend">' + esc(c.legend || "") + '</textarea>' +
+        '<label>Daily summary line</label><textarea data-k="summary">' + esc(c.summary || "") + '</textarea>' +
+        '<label>Fading rule / footnote</label><textarea data-k="fading">' + esc(c.fading || "") + '</textarea>'; break;
+      case "sbt": h = ti("Title", "title") + ta("Header fields", "headerFields", "one per line — shown once at top") + ta("Trial columns", "cols", "one per line") +
+        '<div class="row"><div>' + ni("Sets", "sets", 1, 6) + '</div><div>' + ni("Trials per set", "trials", 1, 20) + '</div></div>' +
+        '<label><input type="checkbox" data-k="showPercent" data-bool="1" ' + (c.showPercent ? "checked" : "") + '> Include % row</label>' +
+        '<label>Footer / criteria note</label><textarea data-k="footer">' + esc(c.footer || "") + '</textarea>'; break;
+      case "graph": case "cumulative": h = ti("Title", "title") +
+        '<div class="row"><div>' + ti("Y-axis label", "yLabel") + '</div><div>' + ti("X-axis label", "xLabel") + '</div></div>' +
+        '<div class="row"><div>' + ni("Y max", "yMax", 1, 5000) + '</div><div>' + ni("Y gridlines", "ySteps", 1, 40) + '</div><div>' + ni("Data points (X)", "xCount", 1, 60) + '</div></div>' +
+        xStyleSelect(c) + chartHSelect(c) +
+        '<label><input type="checkbox" data-k="dateRow" data-bool="1" ' + (c.dateRow ? "checked" : "") + '> Include date write-in row <span class="hint">(number mode only)</span></label>'; break;
+      case "bar": h = ti("Title", "title") +
+        '<div class="row"><div>' + ti("Y-axis label", "yLabel") + '</div><div>' + ti("X-axis label", "xLabel") + '</div></div>' +
+        '<div class="row"><div>' + ni("Y max", "yMax", 1, 5000) + '</div><div>' + ni("Y gridlines", "ySteps", 1, 40) + '</div><div>' + ni("Bars (X)", "xCount", 1, 60) + '</div></div>' +
+        xStyleSelect(c) + chartHSelect(c) +
+        '<label><input type="checkbox" data-k="dateRow" data-bool="1" ' + (c.dateRow ? "checked" : "") + '> Include label write-in row <span class="hint">(number mode only)</span></label>'; break;
+      case "celeration": h = ti("Title", "title") + ti("Y-axis label", "yLabel") +
+        '<div class="row"><div>' + ni("Weeks", "weeks", 1, 30) + '</div><div>' + ni("Lowest power of 10", "minExp", -6, 2) + '</div><div>' + ni("Highest power of 10", "maxExp", -2, 6) + '</div></div>' +
+        '<div class="hint">Y is a ×10 log scale from 10<sup>low</sup> to 10<sup>high</sup> (default 0.001–1000). X spans weeks × 7 calendar days, heavier lines each week.</div>'; break;
+      case "legend": h = ti("Title", "title") + ta("Entries", "entries", "one per line"); break;
+      case "notes": h = ti("Title", "title") + ni("Blank lines", "lines", 1, 20); break;
+      case "signature": h = ta("Signature fields", "fields", "one per line"); break;
+    }
+    h += '<label>Block note <span class="hint">small grey caption shown under this block — optional</span></label>' +
+         '<textarea data-k="note" placeholder="e.g. Score + for independent correct, − for error">' + esc(c.note || "") + '</textarea>';
+    return h;
+  }
+  function sel(v, opt) { return v === opt ? " selected" : ""; }
+  function xStyleSelect(c) {
+    var v = c.xStyle || "number";
+    return '<label>X-axis marks</label><select data-k="xStyle">' +
+      '<option value="date"' + sel(v, "date") + '>Angled date + initials write-in</option>' +
+      '<option value="number"' + sel(v, "number") + '>Session numbers</option>' +
+      '</select>';
+  }
+  function chartHSelect(c) {
+    var v = c.chartH || "medium";
+    return '<label>Chart height</label><select data-k="chartH">' +
+      '<option value="small"' + sel(v, "small") + '>Small (4 per page)</option>' +
+      '<option value="medium"' + sel(v, "medium") + '>Medium (3 per page)</option>' +
+      '<option value="large"' + sel(v, "large") + '>Large (2 per page)</option>' +
+      '</select>';
+  }
+
+  // ---------- Render canvas ----------
+  function render() {
+    canvas.innerHTML = "";
+    model.forEach(function (b) {
+      var node = el('<div class="block" data-id="' + b.id + '" draggable="true"></div>');
+      var tools = el('<div class="block-tools">' +
+        '<button class="drag-handle" title="Drag to reorder">⠿</button>' +
+        '<button data-act="settings" title="Settings">⚙</button>' +
+        '<button data-act="dup" title="Duplicate">⧉</button>' +
+        '<button data-act="del" title="Delete">🗑</button>' +
+        '</div>');
+      node.appendChild(tools);
+
+      if (b.open) {
+        var s = el('<div class="settings"></div>');
+        s.innerHTML = renderSettings(b);
+        node.appendChild(s);
+      }
+      var form = el('<div class="form"></div>');
+      form.innerHTML = renderForm(b);
+      node.appendChild(form);
+      canvas.appendChild(node);
+    });
+    emptyEl.style.display = model.length ? "none" : "block";
+    var n = model.length ? (model.length + " block" + (model.length > 1 ? "s" : "")) : "Empty sheet";
+    statusEl.textContent = currentName ? ("“" + currentName + "” · " + n) : n;
+    save();
+  }
+
+  // ---------- Add / mutate ----------
+  function addBlock(type, index) {
+    var b = { id: nextId(), type: type, config: DEFAULTS[type](), open: false };
+    if (typeof index === "number") model.splice(index, 0, b); else model.push(b);
+    render();
+  }
+  function findIndex(id) { for (var i = 0; i < model.length; i++) if (model[i].id === id) return i; return -1; }
+
+  // ---------- Palette drag ----------
+  var paletteType = null;
+  document.querySelectorAll(".pal-item").forEach(function (item) {
+    item.addEventListener("dragstart", function (e) {
+      paletteType = item.getAttribute("data-type");
+      e.dataTransfer.setData("text/plain", paletteType);
+      e.dataTransfer.effectAllowed = "copy";
+    });
+    item.addEventListener("dragend", function () { paletteType = null; clearDropLine(); });
+  });
+
+  // ---------- Reorder drag ----------
+  var dragId = null;
+  canvas.addEventListener("dragstart", function (e) {
+    var blk = e.target.closest(".block");
+    if (!blk) return;
+    dragId = blk.getAttribute("data-id");
+    blk.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+  });
+  canvas.addEventListener("dragend", function () {
+    dragId = null;
+    var d = canvas.querySelector(".dragging"); if (d) d.classList.remove("dragging");
+    clearDropLine();
+  });
+
+  var sheet = document.getElementById("sheet");
+  function clearDropLine() { var l = canvas.querySelector(".drop-line"); if (l) l.remove(); }
+  function insertionIndexFromY(y) {
+    var blocks = Array.prototype.slice.call(canvas.querySelectorAll(".block"));
+    for (var i = 0; i < blocks.length; i++) {
+      var r = blocks[i].getBoundingClientRect();
+      if (y < r.top + r.height / 2) return i;
+    }
+    return blocks.length;
+  }
+  sheet.addEventListener("dragover", function (e) {
+    if (!paletteType && !dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = paletteType ? "copy" : "move";
+    clearDropLine();
+    var idx = insertionIndexFromY(e.clientY);
+    var line = el('<div class="drop-line"></div>');
+    var blocks = canvas.querySelectorAll(".block");
+    if (idx >= blocks.length) canvas.appendChild(line);
+    else canvas.insertBefore(line, blocks[idx]);
+  });
+  sheet.addEventListener("dragleave", function (e) {
+    if (e.target === sheet && !sheet.contains(e.relatedTarget)) clearDropLine();
+  });
+  sheet.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var idx = insertionIndexFromY(e.clientY);
+    clearDropLine();
+    if (paletteType) {
+      addBlock(paletteType, idx);
+      paletteType = null;
+    } else if (dragId) {
+      var from = findIndex(dragId);
+      if (from === -1) return;
+      var item = model.splice(from, 1)[0];
+      if (from < idx) idx--;
+      model.splice(idx, 0, item);
+      render();
+    }
+  });
+
+  // ---------- Click / edit handlers ----------
+  canvas.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    var blk = e.target.closest(".block");
+    var id = blk.getAttribute("data-id");
+    var i = findIndex(id);
+    var act = btn.getAttribute("data-act");
+    if (act === "settings") { model[i].open = !model[i].open; render(); }
+    else if (act === "del") { model.splice(i, 1); render(); }
+    else if (act === "dup") {
+      var copy = { id: nextId(), type: model[i].type, config: JSON.parse(JSON.stringify(model[i].config)), open: false };
+      model.splice(i + 1, 0, copy); render();
+    }
+  });
+  canvas.addEventListener("dblclick", function (e) {
+    if (e.target.closest(".settings")) return;
+    var blk = e.target.closest(".block"); if (!blk) return;
+    var i = findIndex(blk.getAttribute("data-id"));
+    model[i].open = !model[i].open; render();
+  });
+
+  // live update from settings inputs
+  canvas.addEventListener("input", function (e) {
+    var input = e.target.closest("[data-k]"); if (!input) return;
+    var blk = e.target.closest(".block"); var i = findIndex(blk.getAttribute("data-id"));
+    var k = input.getAttribute("data-k");
+    var c = model[i].config;
+    if (input.getAttribute("data-bool")) c[k] = input.checked;
+    else if (input.getAttribute("data-list")) c[k] = input.value.split("\n").map(function (s) { return s.trim(); }).filter(function (s) { return s.length; });
+    else if (input.type === "number") {
+      var mn = input.hasAttribute("min") ? parseInt(input.getAttribute("min"), 10) : 1;
+      var v = parseInt(input.value, 10);
+      c[k] = Math.max(mn, isNaN(v) ? mn : v);
+    }
+    else c[k] = input.value;
+    // re-render only the form part to avoid losing focus in textarea
+    var form = blk.querySelector(".form");
+    if (form && input.tagName !== "TEXTAREA") form.innerHTML = renderForm(model[i]);
+    save();
+  });
+  canvas.addEventListener("change", function (e) {
+    var input = e.target.closest("[data-k]"); if (!input) return;
+    if (input.tagName === "TEXTAREA" || input.type === "checkbox" || input.tagName === "SELECT") {
+      var blk = e.target.closest(".block"); var i = findIndex(blk.getAttribute("data-id"));
+      blk.querySelector(".form").innerHTML = renderForm(model[i]);
+      save();
+    }
+  });
+
+  // ---------- Saved-sheet library ----------
+  function getLib() { try { return JSON.parse(localStorage.getItem(LIB_KEY) || "{}"); } catch (e) { return {}; } }
+  function setLib(o) { try { localStorage.setItem(LIB_KEY, JSON.stringify(o)); } catch (e) {} }
+  function serialize() { return model.map(function (b) { return { type: b.type, config: b.config }; }); }
+  function deserialize(arr) { return (arr || []).map(function (b) { return { id: nextId(), type: b.type, config: b.config, open: false }; }); }
+  var librarySel = document.getElementById("library");
+  function refreshLib() {
+    var lib = getLib(), names = Object.keys(lib).sort(function (a, b) { return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+    librarySel.innerHTML = '<option value="">' + (names.length ? "— pick a sheet —" : "— none saved —") + "</option>" +
+      names.map(function (n) { return '<option value="' + esc(n) + '"' + (n === currentName ? " selected" : "") + ">" + esc(n) + "</option>"; }).join("");
+  }
+
+  var saveName = document.getElementById("saveName");
+  function flash(msg) { statusEl.textContent = msg; clearTimeout(flash._t); flash._t = setTimeout(render, 1800); }
+
+  document.getElementById("saveBtn").addEventListener("click", function () {
+    var name = (saveName.value || "").trim() || currentName;
+    if (!name) { saveName.focus(); flash("Enter a name to save"); return; }
+    var lib = getLib(), existed = !!lib[name];
+    lib[name] = serialize(); setLib(lib);
+    currentName = name; saveName.value = name;
+    refreshLib(); render();
+    flash((existed ? "Updated “" : "Saved “") + name + "”");
+  });
+  saveName.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); document.getElementById("saveBtn").click(); }
+  });
+  document.getElementById("loadBtn").addEventListener("click", function () {
+    var name = librarySel.value;
+    if (!name) { flash("Pick a sheet to load"); return; }
+    model = deserialize(getLib()[name]); currentName = name; saveName.value = name;
+    render(); flash("Loaded “" + name + "”");
+  });
+  var deleteBtn = document.getElementById("deleteBtn"), delArmed = false, delTimer;
+  deleteBtn.addEventListener("click", function () {
+    var name = librarySel.value;
+    if (!name) { flash("Pick a sheet to delete"); return; }
+    if (!delArmed) {
+      delArmed = true; deleteBtn.textContent = "Confirm?";
+      clearTimeout(delTimer);
+      delTimer = setTimeout(function () { delArmed = false; deleteBtn.textContent = "Delete"; }, 2500);
+      return;
+    }
+    clearTimeout(delTimer); delArmed = false; deleteBtn.textContent = "Delete";
+    var lib = getLib(); delete lib[name]; setLib(lib);
+    if (currentName === name) { currentName = ""; saveName.value = ""; }
+    refreshLib(); render(); flash("Deleted “" + name + "”");
+  });
+
+  // ---------- Export / Import to file ----------
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var data = { format: "aba-datasheet", version: 1, name: currentName || "sheet", blocks: serialize() };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (currentName || "aba-data-sheet").replace(/[^\w\-]+/g, "_") + ".json";
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+  });
+  document.getElementById("importBtn").addEventListener("click", function () { document.getElementById("importFile").click(); });
+  document.getElementById("importFile").addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(reader.result);
+        var blocks = data.blocks || data;
+        if (!Array.isArray(blocks)) throw new Error("bad file");
+        model = deserialize(blocks); currentName = data.name || "";
+        saveName.value = currentName;
+        render(); refreshLib(); flash("Imported “" + (currentName || "sheet") + "”");
+      } catch (err) { flash("Not a valid data-sheet file"); }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  // ---------- Menu open/close ----------
+  var menuBtn = document.getElementById("menuBtn"), menuPanel = document.getElementById("menuPanel");
+  function setMenu(open) { menuPanel.hidden = !open; menuBtn.setAttribute("aria-expanded", open ? "true" : "false"); }
+  menuBtn.addEventListener("click", function (e) { e.stopPropagation(); setMenu(menuPanel.hidden); });
+  document.addEventListener("click", function (e) {
+    if (!menuPanel.hidden && !menuPanel.contains(e.target) && e.target !== menuBtn) setMenu(false);
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") setMenu(false); });
+  menuPanel.addEventListener("click", function (e) { if (e.target.closest(".menu-item")) setMenu(false); });
+
+  // ---------- Toolbar ----------
+  document.getElementById("printBtn").addEventListener("click", function () { window.print(); });
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    model = []; currentName = ""; saveName.value = ""; refreshLib(); render();
+  });
+  document.getElementById("sampleBtn").addEventListener("click", function () {
+    model = [
+      mk("header"), mk("dtt"), mk("frequency"), mk("legend"), mk("notes"), mk("signature")
+    ];
+    render();
+  });
+  function mk(type) { return { id: nextId(), type: type, config: DEFAULTS[type](), open: false }; }
+
+  // ---------- Init ----------
+  load();
+  refreshLib();
+  render();
+})();
+</script>
+</body>
+</html>

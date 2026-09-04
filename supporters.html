@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support the ABA Data Sheet Builder</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #f4f5f7; color: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
+  .top { margin-bottom: 8px; }
+  .top a { color: #2563eb; text-decoration: none; font-size: 14px; }
+  .top a:hover { text-decoration: underline; }
+  h1 { font-size: 28px; margin: 14px 0 6px; }
+  .lede { font-size: 16px; color: #444; margin: 0 0 8px; }
+  .card {
+    background: #fff; border: 1px solid #e3e5e8; border-radius: 14px;
+    padding: 22px; margin: 22px 0; box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  .give { display: flex; gap: 14px; flex-wrap: wrap; }
+  .give .opt { flex: 1; min-width: 170px; border: 1px solid #e6e8eb; border-radius: 12px; padding: 18px; text-align: center; }
+  .give .opt h3 { margin: 0 0 4px; font-size: 16px; }
+  .give .opt p { margin: 0 0 14px; font-size: 13px; color: #667; }
+  .btn {
+    display: inline-block; width: 100%; text-decoration: none; text-align: center;
+    background: #2563eb; color: #fff; font-weight: 600; font-size: 15px;
+    padding: 11px 16px; border-radius: 9px;
+    border: none; cursor: pointer; font-family: inherit;
+  }
+  .banner { background: #ecfdf3; border: 1px solid #b7e4c7; color: #1a7f4b; border-radius: 10px; padding: 12px 14px; margin: 14px 0; font-size: 14px; }
+  .btn:hover { background: #1d4ed8; }
+  .btn.alt { background: #fff; color: #2563eb; border: 1.5px solid #2563eb; }
+  .btn.alt:hover { background: #eff4ff; }
+  .fine { font-size: 12.5px; color: #7a808a; }
+  .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; margin-top: 6px; }
+  .wall .name { background: #f6f8fb; border: 1px solid #eceef1; border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+  .wall .name .tier { font-size: 11px; color: #2563eb; display: block; }
+  .muted { color: #9aa0a6; }
+  footer { text-align: center; margin-top: 30px; font-size: 13px; color: #8a9099; }
+  footer a { color: #2563eb; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top"><a href="index.html">← Back to the data sheet builder</a></div>
+    <div id="thanks" class="banner" style="display:none">🎉 Thank you so much for your support — it genuinely means a lot!</div>
+    <h1>Support this tool ☕</h1>
+    <p class="lede">The ABA Data Sheet Builder is free, with no logins, no ads, and no paywall — and I'd like to keep it that way.</p>
+    <p>If it's saved you time or paper, a small contribution helps cover the domain, hosting, and the hours that go into adding new block types and fixes. Totally optional, always appreciated.</p>
+
+    <div class="card">
+      <h2>Chip in</h2>
+      <div class="give">
+        <div class="opt">
+          <h3>$3</h3>
+          <p>Buy me a coffee — a one-time thank-you.</p>
+          <!-- Payment Link for price_1U4lvMDp529ikPekMpsQVoVr ($3 one-time) -->
+          <a class="btn alt" href="https://buy.stripe.com/bJe28raHY0dSdBig45aVa0e" target="_blank" rel="noopener">Give $3</a>
+        </div>
+        <div class="opt">
+          <h3>$10</h3>
+          <p>A bigger one-time boost — much appreciated.</p>
+          <!-- Payment Link for price_1U4lvFDp529ikPekts6vu0AJ ($10 one-time) -->
+          <a class="btn alt" href="https://buy.stripe.com/8x200j2bs5ycfJq5praVa0f" target="_blank" rel="noopener">Give $10</a>
+        </div>
+        <div class="opt">
+          <h3>$5 / month</h3>
+          <p>Become a recurring supporter and keep it growing.</p>
+          <!-- Payment Link for price_1U4lscDp529ikPekoApshzWA ($5 recurring) -->
+          <a class="btn" href="https://buy.stripe.com/9B67sLg2i9OscxeaJLaVa0d" target="_blank" rel="noopener">Support monthly</a>
+        </div>
+      </div>
+      <p class="fine" style="margin-top:14px">Payments are processed securely by Stripe — I never see your card details. Cancel a monthly plan anytime from the receipt Stripe emails you.</p>
+    </div>
+
+    <div class="card">
+      <h2>Wall of supporters 💙</h2>
+      <p class="fine">A thank-you to the people keeping this free. Names are listed only with permission.</p>
+
+      <!-- ================================================================
+           ADD SUPPORTERS HERE
+           Copy a <div class="name"> line and edit it. For monthly supporters,
+           keep the <span class="tier">Monthly</span>; delete it for one-time.
+           Then re-upload this file to Cloudflare.
+      ================================================================= -->
+      <div class="wall">
+        <div class="name"><span class="tier">Monthly</span>Your Name Here</div>
+        <div class="name">A Grateful RBT</div>
+        <div class="name">BCBA in Ohio</div>
+        <!-- <div class="name"><span class="tier">Monthly</span>Jane D.</div> -->
+      </div>
+
+      <p class="fine" style="margin-top:14px">Want your name added, changed, or removed? Just email me and I'll take care of it.</p>
+    </div>
+
+    <div class="card">
+      <h2>Privacy</h2>
+      <p class="fine" style="margin:0">All payments are handled by <strong>Stripe</strong> on Stripe's own secure checkout — your card details never touch this site, and I never see or store them. This page itself sets no tracking cookies and collects no personal data. Supporter names appear on the wall above only when you explicitly ask to be listed, and I'll remove or change a name anytime on request.</p>
+    </div>
+
+    <footer>
+      Made by <a href="https://datasheets.codelessconsultant.com">Codeless Consultant</a> · Thank you for using the builder.
+    </footer>
+  </div>
+
+  <script>
+    // Payment Links can redirect back to this page with ?thanks=1 after checkout.
+    if (new URLSearchParams(location.search).get("thanks") === "1") {
+      var b = document.getElementById("thanks");
+      if (b) b.style.display = "block";
+    }
+  </script>
+</body>
+</html>
