@@ -253,7 +253,7 @@
       return { title: "Task Analysis", steps: ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"], cols: 5, colLabel: "Trial" };
     },
     frequency: function () {
-      return { title: "Frequency / Event Count", behaviors: ["Behavior 1", "Behavior 2"], boxes: 20 };
+      return { title: "Frequency / Event Count", behaviors: ["Behavior 1", "Behavior 2"], rowH: 34 };
     },
     duration: function () {
       return { title: "Duration Recording", behavior: "Behavior", rows: 8 };
@@ -401,12 +401,12 @@
         return blkTitle(c.title, c) + "<table class='ds'><tr>" + h + "</tr>" + rs + "</table>";
       }
       case "frequency": {
+        var rh = Math.max(18, c.rowH || 34);
+        var fhdr = "<tr><th class='l' style='width:150px'>Behavior</th><th class='l'>Tally</th><th style='width:58px'>Total</th></tr>";
         var rowsF = c.behaviors.map(function (bh) {
-          var boxes = "";
-          for (var n = 0; n < c.boxes; n++) boxes += "<td style='width:18px'></td>";
-          return "<tr><td class='l' style='width:130px'>" + esc(bh) + "</td>" + boxes + "<td style='width:42px'>Total</td></tr>";
+          return "<tr><td class='l' style='height:" + rh + "px'>" + esc(bh) + "</td><td></td><td></td></tr>";
         }).join("");
-        return blkTitle(c.title, c) + "<table class='ds'>" + rowsF + "</table>";
+        return blkTitle(c.title, c) + "<table class='ds'>" + fhdr + rowsF + "</table>";
       }
       case "duration": {
         var rD = "";
@@ -668,7 +668,7 @@
         '<label><input type="checkbox" data-k="percentCol" data-bool="1" ' + (c.percentCol ? "checked" : "") + '> Include % column</label>'; break;
       case "taskanalysis": h = ti("Title", "title") + ta("Steps", "steps", "one per line") +
         '<div class="row"><div>' + ni("Columns", "cols", 1, 20) + '</div><div>' + ti("Column label", "colLabel") + '</div></div>'; break;
-      case "frequency": h = ti("Title", "title") + ta("Behaviors", "behaviors", "one per line") + ni("Tally boxes", "boxes", 5, 40); break;
+      case "frequency": h = ti("Title", "title") + ta("Behaviors", "behaviors", "one per line") + ni("Tally row height (px)", "rowH", 18, 90); break;
       case "duration": h = ti("Title", "title") + ti("Behavior", "behavior") + ni("Rows", "rows", 1, 30); break;
       case "interval":
         h = ti("Title", "title") + ti("Behavior", "behavior") +
