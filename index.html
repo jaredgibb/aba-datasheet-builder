@@ -305,7 +305,7 @@
       return { title: "Frequency Graph", yLabel: "Frequency", yMax: 20, ySteps: 10, xCount: 10, xLabel: "Date / initials", xStyle: "date", chartH: "medium" };
     },
     celeration: function () {
-      return { title: "Standard Celeration Chart", yLabel: "Count per minute", weeks: 20, minExp: -3, maxExp: 3 };
+      return { title: "Standard Celeration Chart", yLabel: "Count per minute", weeks: 20, minExp: -3, maxExp: 3, dayLabels: "letters", dayLabelAngle: "slanted", monthYear: true };
     },
     notes: function () { return { title: "Notes / Comments", lines: 5 }; },
     signature: function () { return { fields: ["Therapist signature", "Date", "Supervisor signature", "Date"] }; }
@@ -508,7 +508,10 @@
         return blkTitle(c.title, c) + barSVG(c);
       }
       case "celeration": {
-        return blkTitle(c.title, c) + celerationSVG(c);
+        var myL = c.monthYear === false ? "" :
+          '<span style="font-weight:400;font-size:10.5px;color:#333;white-space:nowrap;text-align:right">Mo / Yr:&nbsp;<span style="display:inline-block;border-bottom:1px solid #444;width:96px"></span></span>';
+        var chead = '<div class="blk-title" style="display:flex;align-items:flex-end;gap:12px"><span style="flex:1;font-size:13px">' + esc(c.title) + '</span>' + myL + '</div>' + renderNote(c);
+        return chead + celerationSVG(c);
       }
       case "legend": {
         var items = c.entries.map(function (e) { return "<span>" + esc(e) + "</span>"; }).join("");
@@ -613,8 +616,10 @@
     if (maxExp <= minExp) maxExp = minExp + 1;
     var D = maxExp - minExp;
     var weeks = Math.min(30, Math.max(1, c.weeks || 20)), days = weeks * 7;
-    var W = 760, H = 140 + D * 66, L = 58, R = 16, T = 16, B = 84;
-    var pw = W - L - R, ph = H - T - B;
+    var perDec = 52;
+    var W = 760, L = 58, R = 16, T = 24, B = 72;
+    var ph = D * perDec, H = T + ph + B;
+    var pw = W - L - R;
     function yFor(p) { return T + ph * (maxExp - p) / D; }
     function fmtPow(p) { var v = Math.pow(10, p); return p < 0 ? v.toFixed(-p) : String(v); }
     var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
@@ -634,8 +639,24 @@
     // day lines; heavier every 7 (week / Sunday lines)
     for (var d = 0; d <= days; d++) {
       var x = L + pw * d / days, isWeek = (d % 7 === 0);
-      s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + (T + ph) + '" stroke="' + (isWeek ? "#3f444b" : "#6f767e") + '" stroke-width="' + (isWeek ? 1.5 : 1.05) + '" shape-rendering="crispEdges"/>';
+      s += '<line x1="' + x + '" y1="' + T + '" x2="' + x + '" y2="' + (T + ph) + '" stroke="#4E93C4" stroke-width="' + (isWeek ? 1.5 : 1.25) + '" shape-rendering="crispEdges"/>';
       if (isWeek) s += xAxisMark(x, T + ph, "date");
+    }
+    // day orientation labels along the top edge
+    var dLbl = c.dayLabels || "none";
+    if (dLbl === "letters") {
+      var slant = (c.dayLabelAngle || "slanted") === "slanted";
+      var wk = ["S", "M", "T", "W", "T", "F", "S"];
+      for (var di = 0; di < days; di++) {
+        var xL = L + pw * di / days, yL = T - 5;
+        if (slant) s += '<text x="' + xL.toFixed(1) + '" y="' + yL + '" font-size="6.5" fill="#5a616a" text-anchor="middle" transform="rotate(-45 ' + xL.toFixed(1) + ' ' + yL + ')">' + wk[di % 7] + '</text>';
+        else s += '<text x="' + xL.toFixed(1) + '" y="' + yL + '" font-size="6" fill="#5a616a" text-anchor="middle">' + wk[di % 7] + '</text>';
+      }
+    } else if (dLbl === "numbers") {
+      for (var dj = 0; dj <= days; dj += 7) {
+        var xN = L + pw * dj / days;
+        s += '<text x="' + xN.toFixed(1) + '" y="' + (T - 5) + '" font-size="7.5" fill="#556" text-anchor="middle">' + dj + '</text>';
+      }
     }
     // frame emphasis
     s += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (T + ph) + '" stroke="#333" stroke-width="1.1"/>';
@@ -700,8 +721,12 @@
         '<div class="row"><div>' + ni("Y max", "yMax", 1, 5000) + '</div><div>' + ni("Y gridlines", "ySteps", 1, 40) + '</div><div>' + ni("Bars (X)", "xCount", 1, 60) + '</div></div>' +
         xStyleSelect(c) + chartHSelect(c) +
         '<label><input type="checkbox" data-k="dateRow" data-bool="1" ' + (c.dateRow ? "checked" : "") + '> Include label write-in row <span class="hint">(number mode only)</span></label>'; break;
-      case "celeration": h = ti("Title", "title") + ti("Y-axis label", "yLabel") +
+      case "celeration": var dl = c.dayLabels || "letters", dla = c.dayLabelAngle || "slanted";
+        h = ti("Title", "title") + ti("Y-axis label", "yLabel") +
         '<div class="row"><div>' + ni("Weeks", "weeks", 1, 30) + '</div><div>' + ni("Lowest power of 10", "minExp", -6, 2) + '</div><div>' + ni("Highest power of 10", "maxExp", -2, 6) + '</div></div>' +
+        '<div class="row"><div><label>Day labels (top)</label><select data-k="dayLabels"><option value="none"' + sel(dl, "none") + '>None</option><option value="letters"' + sel(dl, "letters") + '>Weekday letters</option><option value="numbers"' + sel(dl, "numbers") + '>Day numbers (weekly)</option></select></div>' +
+        '<div><label>Label angle</label><select data-k="dayLabelAngle"><option value="slanted"' + sel(dla, "slanted") + '>Slanted →</option><option value="horizontal"' + sel(dla, "horizontal") + '>Horizontal</option></select></div></div>' +
+        '<label><input type="checkbox" data-k="monthYear" data-bool="1" ' + (c.monthYear !== false ? "checked" : "") + '> Show Month / Year line under title</label>' +
         '<div class="hint">Y is a ×10 log scale from 10<sup>low</sup> to 10<sup>high</sup> (default 0.001–1000). X spans weeks × 7 calendar days, heavier lines each week.</div>'; break;
       case "legend": h = ti("Title", "title") + ta("Entries", "entries", "one per line"); break;
       case "notes": h = ti("Title", "title") + ni("Blank lines", "lines", 1, 20); break;
