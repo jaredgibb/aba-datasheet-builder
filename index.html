@@ -139,6 +139,17 @@
   .sig { display: flex; gap: 30px; margin-top: 8px; }
   .sig .field { flex: 1; }
   .small-caps { font-size: 11px; color: #555; }
+  .cold-probe-table { table-layout: fixed; }
+  .cold-probe-table .result-col { width: 120px; }
+  .cold-probe-table td { height: 28px; overflow-wrap: anywhere; }
+  .cold-probe-choice { display: flex; justify-content: space-evenly; gap: 12px; }
+  .cold-probe-target { font-size: 12px; margin: 6px 0; overflow-wrap: anywhere; }
+  .cold-probe-row { display: grid; gap: 0; margin-top: 5px; }
+  .cold-probe-box { min-width: 0; border: 1px solid #555; font-size: 11px; }
+  .cold-probe-box + .cold-probe-box { border-left: 0; }
+  .cold-probe-date { display: flex; align-items: baseline; gap: 4px; padding: 6px 4px; border-bottom: 1px solid #555; }
+  .cold-probe-date .ln { flex: 1; min-width: 0; height: 14px; border-bottom: 1px solid #888; }
+  .cold-probe-box .cold-probe-choice { padding: 9px 4px; font-size: 12px; }
 
   /* ---------- Print ---------- */
   @media print {
@@ -152,7 +163,7 @@
     .settings { display: none !important; }
     .block { margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid; }
     .block .form, table.ds, .field-grid, .notes-lines, .sig { break-inside: avoid; page-break-inside: avoid; }
-    table.ds tr, .field, .notes-lines .nl { break-inside: avoid; page-break-inside: avoid; }
+    table.ds tr, .field, .notes-lines .nl, .cold-probe-row { break-inside: avoid; page-break-inside: avoid; }
     table.ds thead { display: table-header-group; }
     @page { size: letter; margin: 0.3in; }
   }
@@ -169,6 +180,7 @@
 
     <h2>Data collection</h2>
     <div class="pal-item" draggable="true" data-type="dtt"><span class="ico">▦</span> DTT / trial-by-trial</div>
+    <div class="pal-item" draggable="true" data-type="coldprobe"><span class="ico">✓</span> Cold probe data collection</div>
     <div class="pal-item" draggable="true" data-type="taskanalysis"><span class="ico">☑</span> Task analysis / chaining</div>
     <div class="pal-item" draggable="true" data-type="frequency"><span class="ico">#</span> Frequency / count</div>
     <div class="pal-item" draggable="true" data-type="duration"><span class="ico">⏱</span> Duration</div>
@@ -181,6 +193,7 @@
     <div class="pal-item" draggable="true" data-type="session"><span class="ico">🗓️</span> Session runner / schedule</div>
 
     <h2>Graphs (hand-plot)</h2>
+    <div class="pal-item" draggable="true" data-type="coldprobechart"><span class="ico">▤</span> Cold probe chart</div>
     <div class="pal-item" draggable="true" data-type="graph"><span class="ico">📈</span> Blank line graph</div>
     <div class="pal-item" draggable="true" data-type="cumulative"><span class="ico">📈</span> Cumulative graph</div>
     <div class="pal-item" draggable="true" data-type="bar"><span class="ico">📊</span> Bar / frequency graph</div>
@@ -249,6 +262,12 @@
     dtt: function () {
       return { title: "Discrete Trial Training", targets: ["Target 1", "Target 2", "Target 3"], trials: 10, percentCol: true };
     },
+    coldprobe: function () {
+      return { title: "Cold Probe Data Collection", targets: ["Target 1", "Target 2", "Target 3"], note: "Circle Yes or No for each target." };
+    },
+    coldprobechart: function () {
+      return { title: "Cold Probe Chart", target: "Target 1", probes: 10, perRow: 10, note: "Write the date above each box and circle Y or N. Y = Yes; N = No." };
+    },
     taskanalysis: function () {
       return { title: "Task Analysis", steps: ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"], cols: 5, colLabel: "Trial" };
     },
@@ -313,6 +332,7 @@
 
   var LABELS = {
     header: "Session header", dtt: "DTT / trial-by-trial", taskanalysis: "Task analysis",
+    coldprobe: "Cold probe data collection", coldprobechart: "Cold probe chart",
     frequency: "Frequency / count", duration: "Duration", interval: "Interval recording",
     abc: "ABC narrative", sbt: "SBT data collection", toilet: "Toilet training", session: "Session runner", graph: "Blank line graph", cumulative: "Cumulative graph", bar: "Bar / frequency graph", celeration: "Standard celeration chart", legend: "Prompt code legend", notes: "Notes", signature: "Signature line"
   };
@@ -389,6 +409,26 @@
           return "<tr><td class='l'>" + esc(t) + "</td>" + cells + "</tr>";
         }).join("");
         return blkTitle(c.title, c) + "<table class='ds'><tr>" + head + "</tr>" + rows + "</table>";
+      }
+      case "coldprobe": {
+        var probeTargets = c.targets && c.targets.length ? c.targets : [""];
+        var probeRows = probeTargets.map(function (target) {
+          return '<tr><td class="l">' + esc(target) + '</td><td><div class="cold-probe-choice"><span>Yes</span><span>No</span></div></td></tr>';
+        }).join("");
+        return blkTitle(c.title, c) + '<table class="ds cold-probe-table"><thead><tr><th scope="col">Target</th><th scope="col" class="result-col">Response</th></tr></thead><tbody>' + probeRows + '</tbody></table>';
+      }
+      case "coldprobechart": {
+        var probes = Math.min(60, Math.max(1, parseInt(c.probes, 10) || 10));
+        var probePerRow = Math.min(10, Math.max(1, parseInt(c.perRow, 10) || 10));
+        var chart = blkTitle(c.title, c) + '<div class="cold-probe-target">Target: ' + (c.target ? esc(c.target) : '____________________________') + '</div>';
+        for (var start = 0; start < probes; start += probePerRow) {
+          chart += '<div class="cold-probe-row" style="grid-template-columns:repeat(' + Math.min(probes, probePerRow) + ', minmax(0, 1fr))">';
+          for (var probe = start; probe < Math.min(start + probePerRow, probes); probe++) {
+            chart += '<div class="cold-probe-box"><div class="cold-probe-date"><span class="ln"></span></div><div class="cold-probe-choice"><span>Y</span><span>N</span></div></div>';
+          }
+          chart += '</div>';
+        }
+        return chart;
       }
       case "taskanalysis": {
         var h = '<th class="l">Step</th>';
@@ -687,6 +727,9 @@
       case "header": h = ti("Title", "title") + ta("Fields", "fields", "one per line"); break;
       case "dtt": h = ti("Title", "title") + ta("Targets", "targets", "one per line") + ni("Trials per target", "trials", 1, 30) +
         '<label><input type="checkbox" data-k="percentCol" data-bool="1" ' + (c.percentCol ? "checked" : "") + '> Include % column</label>'; break;
+      case "coldprobe": h = ti("Title", "title") + ta("Targets", "targets", "one per line"); break;
+      case "coldprobechart": h = ti("Title", "title") + ti("Target", "target") +
+        '<div class="row"><div>' + ni("Probe boxes", "probes", 1, 60) + '</div><div>' + ni("Boxes per row", "perRow", 1, 10) + '</div></div>'; break;
       case "taskanalysis": h = ti("Title", "title") + ta("Steps", "steps", "one per line") +
         '<div class="row"><div>' + ni("Columns", "cols", 1, 20) + '</div><div>' + ti("Column label", "colLabel") + '</div></div>'; break;
       case "frequency": h = ti("Title", "title") + ta("Behaviors", "behaviors", "one per line") + ni("Tally row height (px)", "rowH", 18, 90); break;
